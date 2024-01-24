@@ -1,0 +1,58 @@
+name: CD - Python Chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      appVersion:
+        description: 'version de aplicación'
+        default: v0.1.0
+      environment:
+        description: 'Ambiente'
+        type: choice
+        options:
+        - prod
+        - qa
+        - test
+      ACR_NAME:
+        default: demodevacr1
+      ACR_USERNAME:
+        default: 00000000-0000-0000-0000-000000000000
+      ACR_PASSWORD:
+        required: true
+    
+jobs:
+  build-and-push:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Configurar values.yaml
+      run: |
+        cp .devops/values-${{ inputs.environment }}.yaml pythonChart/values.yaml
+        sed -i "s/tag: \".*\"/tag: \"${{ inputs.appVersion }}\"/" pythonChart/values.yaml
+      
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: v3.12.3 #Helm 13 tiene un bug
+    
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ inputs.ACR_NAME }}.azurecr.io #ACR_FULL_NAME incluye el azurecr.io
+        username: ${{ inputs.ACR_USERNAME }}
+        password: ${{ inputs.ACR_PASSWORD }}
+    
+    - name: Enpaquetar y subir helm a acr
+      shell: bash
+      run: |-
+        export HELM_EXPERIMENTAL_OCI=1 #Es necesario para el chart save
+        helm package pythonChart
+        echo '${{ inputs.ACR_PASSWORD }}' | helm registry login ${{ inputs.ACR_FULL_NAME}} --username ${{ inputs.ACR_USERNAME}} --password-stdin
+        helm push python-app-0.1.0.tgz oci://${{ inputs.ACR_FULL_NAME }}.azurecr.io/helm
+    

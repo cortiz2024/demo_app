@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - master
-      - branch-one
+    paths:
+      - 'src/**'
 
 jobs:
   build-and-push:
@@ -15,6 +16,15 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        sparse-checkout: 'src/python-app'
+        sparse-checkout-cone-mode: false
+
+    - name: Move app files to root
+      run: |
+        shopt -s dotglob
+        mv src/python-app/* .
+        rm -rf src
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
