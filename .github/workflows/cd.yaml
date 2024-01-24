@@ -53,6 +53,6 @@ jobs:
       run: |-
         export HELM_EXPERIMENTAL_OCI=1 #Es necesario para el chart save
         helm package pythonChart
-        echo '${{ inputs.ACR_PASSWORD }}' | helm registry login ${{ inputs.ACR_FULL_NAME}} --username ${{ inputs.ACR_USERNAME}} --password-stdin
-        helm push python-app-0.1.0.tgz oci://${{ inputs.ACR_FULL_NAME }}.azurecr.io/helm
+        echo '${{ inputs.ACR_PASSWORD }}' | helm registry login ${{ inputs.ACR_NAME }}.azurecr.io --username ${{ inputs.ACR_USERNAME}} --password-stdin
+        helm push python-app-0.1.0.tgz oci://${{ inputs.ACR_NAME }}.azurecr.io/helm
     
