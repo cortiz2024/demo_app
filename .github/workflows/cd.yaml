@@ -72,11 +72,12 @@ jobs:
     - name: Update Helm release version on Argocd Application
       id: change_helm_chart_version
       run: |
-        sed -i "s/targetRevision: \".*\"/targetRevision: \"${{ inputs.helmVersion }}-${{ inputs.environment }}\"/" overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
+        sed -i "s/targetRevision: .*/targetRevision: ${{ inputs.helmVersion }}-${{ inputs.environment }}/" overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
+        cat overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
         git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
         
     - name: Commit and push changes
-      if: ${{ steps.change_helm_chart_version.outputs.changes }}
+      if: ${{ steps.change_helm_chart_version.outputs.changes == 'true' }}
       run: |
         git config --global user.name '${{ github.actor }}'
         git config --global user.email '${{ github.actor }}@users.noreply.github.com'
