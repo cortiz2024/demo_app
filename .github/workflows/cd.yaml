@@ -52,14 +52,14 @@ jobs:
       run: |-
         export HELM_EXPERIMENTAL_OCI=1 #Es necesario para el chart save
         helm package ${{ inputs.chartName }} --version ${{ inputs.helmVersion }}
-        helm push ${{ inputs.chartName }}-${{ inputs.helmVersion }}.tgz oci://ghcr.io/cortiz2024/demo_app
+        helm push python-app-${{ inputs.helmVersion }}.tgz oci://ghcr.io/cortiz2024/demo_app
 
-  deploy-helm-chart:
-    permissions: write-all
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+  # deploy-helm-chart:
+  #   permissions: write-all
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GITHUB_TOKEN:
+  #   steps:
+  #   - name: Checkout Repository
+  #     uses: actions/checkout@v4
     
