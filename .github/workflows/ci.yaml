@@ -42,13 +42,13 @@ jobs:
         context: .
         file: ./Dockerfile
         load: true
-        tags: ghcr.io/${{ github.repository }}/demo_app:test_tag
+        tags: ghcr.io/${{ github.repository }}/python-app:test_tag
 
     
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ghcr.io/${{ github.repository }}/demo_app:test_tag
+        image-ref: ghcr.io/${{ github.repository }}/python-app:test_tag
         trivy-config: trivy.yaml
         
     - name: Upload Trivy scan results to GitHub Security tab
@@ -62,7 +62,7 @@ jobs:
       uses: rymndhng/release-on-push-action@master
       with:
         bump_version_scheme: minor
-        tag_prefix: "v"
+        tag_prefix: ''
         release_name: "Release <RELEASE_VERSION>"
 
     - name: Build and Push Docker image
@@ -72,5 +72,5 @@ jobs:
         file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}/demo_app:latest
-          ghcr.io/${{ github.repository }}/demo_app:${{ steps.release.outputs.tag_name }}
+          ghcr.io/${{ github.repository }}/python-app:latest
+          ghcr.io/${{ github.repository }}/python-app:${{ steps.release.outputs.tag_name }}

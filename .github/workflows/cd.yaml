@@ -9,9 +9,12 @@ on:
       helmVersion:
         description: 'version de chart de Helm'
         default: '0.1.0'
+      chartFolder:
+        description: 'Nombre de folder del chart de Helm'
+        default: 'pythonChart'
       chartName:
         description: 'Nombre de chart de Helm'
-        default: 'pythonChart'
+        default: 'python-chart'
       environment:
         description: 'Ambiente'
         type: choice
@@ -51,15 +54,31 @@ jobs:
       shell: bash
       run: |-
         export HELM_EXPERIMENTAL_OCI=1 #Es necesario para el chart save
-        helm package ${{ inputs.chartName }} --version ${{ inputs.helmVersion }}
-        helm push python-app-${{ inputs.helmVersion }}.tgz oci://ghcr.io/cortiz2024/demo_app
+        helm package ${{ inputs.chartFolder }} --version ${{ inputs.helmVersion }}-${{ inputs.environment }}
+        helm push ${{ inputs.chartName }}-${{ inputs.helmVersion }}-${{ inputs.environment }}.tgz oci://ghcr.io/cortiz2024/demo_app
 
-  # deploy-helm-chart:
-  #   permissions: write-all
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     GITHUB_TOKEN:
-  #   steps:
-  #   - name: Checkout Repository
-  #     uses: actions/checkout@v4
+  deploy-helm-chart:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        repository: cortiz2024/test_image
+        token: ${{ secrets.GH_PAT }}
     
+    - name: Update Helm release version on Argocd Application
+      id: change_helm_chart_version
+      run: |
+        sed -i "s/targetRevision: \".*\"/targetRevision: \"${{ inputs.helmVersion }}-${{ inputs.environment }}\"/" overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
+        git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+        
+    - name: Commit and push changes
+      if: ${{ steps.change_helm_chart_version.outputs.changes }}
+      run: |
+        git config --global user.name '${{ github.actor }}'
+        git config --global user.email '${{ github.actor }}@users.noreply.github.com'
+        git commit -am "Updated Helm release version to ${{ inputs.helmVersion }}-${{ inputs.environment }}"
+        git push
