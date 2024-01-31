@@ -69,7 +69,7 @@ jobs:
     name: 🚀 Deploy Test
     environment: Test
     needs: Preparativos
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: ${{ always()  && inputs.test }} 
     outputs:
       name_environment: ${{ steps.deploy.outputs.name_environment }}
