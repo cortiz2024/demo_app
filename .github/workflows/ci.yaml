@@ -39,6 +39,12 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        sparse-checkout: 'src/python-app'
+        sparse-checkout-cone-mode: false
+        
     - name: Move app files to root
       run: |
         ls -l
