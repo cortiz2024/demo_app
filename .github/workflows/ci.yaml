@@ -95,7 +95,6 @@ jobs:
         file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}/python-app:latest
           ghcr.io/${{ github.repository }}/python-app:${{ steps.version.outputs.version }}
 
     - name: Execute Deploy
