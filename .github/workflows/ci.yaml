@@ -33,6 +33,7 @@ jobs:
 
   continuos_delivery:
     name: 🛠 🧱 Build and Push
+    needs: continuos_integration
     permissions: write-all
     runs-on: ubuntu-latest
     env:
