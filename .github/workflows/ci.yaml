@@ -104,4 +104,4 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ github.repository }}/python-app:latest
-          ghcr.io/${{ github.repository }}/python-app:${{ steps.release.outputs.tag_name }}
+          ghcr.io/${{ github.repository }}/python-app:${{ steps.version.outputs.version }}
