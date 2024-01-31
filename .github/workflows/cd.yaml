@@ -33,6 +33,7 @@ on:
 jobs:
   Preparativos:
     name: 📕 Preparativos
+    environment: Test
     outputs:
       helmVersion: ${{ steps.helmVersion.outputs.version }}
     runs-on: ubuntu-latest
@@ -77,7 +78,7 @@ jobs:
       - run: echo Deploy Test
       - name: Deploy
         id: deploy
-        uses: infrastructure-services/continuos-deployment@build-and-deploy
+        uses: infrastructure-services/continuos-deployment@build-and-deploy-2
         with:
           appName: ${{ vars.APPNAME }}
           teamProject: ${{ vars.PROJECT }}
