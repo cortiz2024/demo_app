@@ -1,4 +1,4 @@
-name: CICD Workflow
+name: CI Workflow
 
 on:
   workflow_dispatch:
@@ -88,14 +88,6 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
-    # - name: Create release
-    #   id: release
-    #   uses: rymndhng/release-on-push-action@master
-    #   with:
-    #     bump_version_scheme: minor
-    #     tag_prefix: ''
-    #     release_name: "Release <RELEASE_VERSION>"
-
     - name: Build and Push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -105,3 +97,23 @@ jobs:
         tags: |
           ghcr.io/${{ github.repository }}/python-app:latest
           ghcr.io/${{ github.repository }}/python-app:${{ steps.version.outputs.version }}
+
+    - name: Execute Deploy
+      if: github.ref == 'refs/heads/main'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: | 
+          const appVersion = "${{ steps.version.outputs.version }}";
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'cd.yml',
+            ref: context.ref,
+            inputs: {
+              appVersion: appVersion,
+              test: true,
+              qa: true,
+              prod: true,
+            }
+          });

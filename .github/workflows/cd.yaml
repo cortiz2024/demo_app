@@ -1,85 +1,97 @@
-name: CD - Python Chart
-
+name: Continuous Deployment
 on:
   workflow_dispatch:
     inputs:
       appVersion:
-        description: 'Version de aplicación(Tag de la imagen ya existente)'
-        default: '0.5.0'
-      helmVersion:
-        description: 'version de chart de Helm(Es la versiona que junto al environment se creará)'
-        default: '0.5.0'
+        description: 'version de aplicación'
+        required: true
+      helmVersion: 
+        description: 'version de helm'
+        required: false
+        default: ''
       chartFolder:
         description: 'Nombre de folder del chart de Helm'
         default: 'pythonChart'
       chartName:
         description: 'Nombre de chart de Helm'
         default: 'python-chart'
-      environment:
-        description: 'Ambiente'
-        type: choice
-        options:
-        - prod
-        - qa
-        - dev
-    
+      test:
+        description: 'Test'
+        required: true
+        type: boolean
+        default: false
+      qa:
+        description: 'QA'
+        required: true
+        type: boolean
+        default: false
+      prod:
+        description: 'Production'
+        required: true
+        type: boolean
+        default: false
 jobs:
-  push-helm-chart:
-    permissions: write-all
+  Preparativos:
+    name: 📕 Preparativos
+    outputs:
+      helmVersion: ${{ steps.helmVersion.outputs.version }}
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - run: echo preparativos
+      - run: echo Github refs ${{ github.ref }}
+      - run: echo Version App ${{ inputs.appVersion }}
+      - run: echo Helm Version ${{ inputs.helmVersion }}
+      - name: Show Environment to deploy
+        run: |
+          echo "test=${{ inputs.test }}"
+          echo "qa=${{ inputs.qa }}"
+          echo "prod=${{ inputs.prod }}"
+      - id: helmVersion
+        run: |
+          defaultVersion="${{ inputs.appVersion }}-${{ github.run_number }}"
+          if [[ -z "${{ inputs.helmVersion }}" ]]; then
+            echo "version=$defaultVersion" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ inputs.helmVersion }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Validate variables
+        run: |
+          if [[ -z "${{ vars.APPNAME }}" ]]; then
+            echo "APPNAME is empty"
+            exit 1
+          fi
+          if [[ -z "${{ vars.PROJECT }}" ]]; then
+            echo "PROJECT is empty"
+            exit 1
+          fi
 
-    - name: Configurar values.yaml
-      run: |
-        cp .devops/values-${{ inputs.environment }}.yaml pythonChart/values.yaml
-        sed -i "s/tag: \".*\"/tag: \"${{ inputs.appVersion }}\"/" pythonChart/values.yaml
-      
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      with:
-        version: v3.12.3 #Helm 13 tiene un bug
-
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Enpaquetar y subir helm a ghcr
-      shell: bash
-      run: |-
-        export HELM_EXPERIMENTAL_OCI=1 #Es necesario para el chart save
-        helm package ${{ inputs.chartFolder }} --version ${{ inputs.helmVersion }}-${{ inputs.environment }}
-        helm push ${{ inputs.chartName }}-${{ inputs.helmVersion }}-${{ inputs.environment }}.tgz oci://ghcr.io/cortiz2024/demo_app
-
-  deploy-helm-chart:
-    permissions: write-all
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  Deploy_to_test:
+    name: 🚀 Deploy Test
+    environment: Test
+    needs: Preparativos
+    runs-on: self-hosted
+    if: ${{ always()  && inputs.test }} 
+    outputs:
+      name_environment: ${{ steps.deploy.outputs.name_environment }}
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        repository: cortiz2024/test_image
-        token: ${{ secrets.GH_PAT }}
-    
-    - name: Update Helm release version on Argocd Application
-      id: change_helm_chart_version
-      run: |
-        sed -i "s/targetRevision: .*/targetRevision: ${{ inputs.helmVersion }}-${{ inputs.environment }}/" overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
-        cat overlays/${{ inputs.environment }}/python-apps/patch-values.yaml
-        git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
-        
-    - name: Commit and push changes
-      if: ${{ steps.change_helm_chart_version.outputs.changes == 'true' }}
-      run: |
-        git config --global user.name '${{ github.actor }}'
-        git config --global user.email '${{ github.actor }}@users.noreply.github.com'
-        git commit -am "Updated Helm release version to ${{ inputs.helmVersion }}-${{ inputs.environment }}"
-        git push
+      - run: echo Deploy Test
+      - name: Deploy
+        id: deploy
+        uses: infrastructure-services/continuos-deployment@build-and-deploy
+        with:
+          appName: ${{ vars.APPNAME }}
+          teamProject: ${{ vars.PROJECT }}
+          namespace: ${{ vars.PROJECT }}-${{ vars.ENVIRONMENT_NAME }}
+          appVersion: ${{ inputs.appVersion }}
+          fileValuesPath: .devops/value-${{ vars.ENVIRONMENT_NAME }}.yaml
+          GITHUB_HELMREPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          helmChartVersionLatest: ${{ needs.Preparativos.outputs.helmVersion }}-${{ vars.ENVIRONMENT_NAME }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_REGISTRY: ghcr.io
+          GHCR_PAT: ${{ secrets.GH_PAT }}
+          environment: ${{ vars.ENVIRONMENT_NAME }}
+          chartFolder: ${{ inputs.chartFolder }}
+          chartName: ${{ inputs.chartName }}
+          helmRepo: cortiz2024/demo_app/pythonChart
+          helmRepoRef: main
