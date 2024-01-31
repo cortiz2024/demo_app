@@ -108,12 +108,12 @@ jobs:
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            workflow_id: 'cd.yml',
+            workflow_id: 'cd.yaml',
             ref: context.ref,
             inputs: {
               appVersion: appVersion,
               test: true,
-              qa: true,
-              prod: true,
+              qa: false,
+              prod: false,
             }
           });
