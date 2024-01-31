@@ -87,7 +87,7 @@ jobs:
           fileValuesPath: .devops/value-${{ vars.ENVIRONMENT_NAME }}.yaml
           GITHUB_HELMREPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           helmChartVersionLatest: ${{ needs.Preparativos.outputs.helmVersion }}-${{ vars.ENVIRONMENT_NAME }}
-          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_USERNAME: cortiz2024
           GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GHCR_REGISTRY: ghcr.io
           GHCR_PAT: ${{ secrets.GH_PAT }}
