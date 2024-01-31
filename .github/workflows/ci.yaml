@@ -1,15 +1,17 @@
 name: CI Workflow
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
+      - hotfix/*
     paths:
       - 'src/**'
 
 jobs:
-  build-and-push:
-    permissions: write-all
+  continuos_integration:
+    name: 🔎 Continuos Integration
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -20,8 +22,25 @@ jobs:
         sparse-checkout: 'src/python-app'
         sparse-checkout-cone-mode: false
 
+    # - name: SonarQube Analyzer
+    #   uses: infrastructure-services/continuos-integration@v2
+    #   with:
+    #     github_username: ${{ secrets.ARQUITECTURA_USER }}
+    #     github_token: ${{ secrets.ARQUITECTURA_DEPLOY }}
+    #     sonar_url: ${{ secrets.SONAR_HOST_URL }}
+    #     sonar_token: ${{ secrets.SONAR_TOKEN }}
+    #     workflow: '.NET 8'
+
+  continuos_delivery:
+    name: 🛠 🧱 Build and Push
+    permissions: write-all
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
     - name: Move app files to root
       run: |
+        ls -l
         shopt -s dotglob
         mv src/python-app/* .
         rm -rf src
@@ -43,7 +62,6 @@ jobs:
         file: ./Dockerfile
         load: true
         tags: ghcr.io/${{ github.repository }}/python-app:test_tag
-
     
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -57,13 +75,19 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
-    - name: Create release
-      id: release
-      uses: rymndhng/release-on-push-action@master
+    - name: "Get Version"
+      id: version
+      uses: infrastructure-services/continuos-integration@version
       with:
-        bump_version_scheme: minor
-        tag_prefix: ''
-        release_name: "Release <RELEASE_VERSION>"
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    # - name: Create release
+    #   id: release
+    #   uses: rymndhng/release-on-push-action@master
+    #   with:
+    #     bump_version_scheme: minor
+    #     tag_prefix: ''
+    #     release_name: "Release <RELEASE_VERSION>"
 
     - name: Build and Push Docker image
       uses: docker/build-push-action@v5
