@@ -44,7 +44,7 @@ jobs:
       with:
         sparse-checkout: 'src/python-app'
         sparse-checkout-cone-mode: false
-        
+
     - name: Move app files to root
       run: |
         ls -l
