@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 2
 environment: dev
 image:
   repository: ghcr.io/cortiz2024/demo_app/python-app
